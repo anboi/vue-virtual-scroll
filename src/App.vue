@@ -1,17 +1,17 @@
 <template>
   <div id="app">
     <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <HorizontalVirtualScrollTable />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import HorizontalVirtualScrollTable from './components/HorizontalVirtualScrollTable'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    HorizontalVirtualScrollTable
   }
 }
 </script>
