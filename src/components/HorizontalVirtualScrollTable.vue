@@ -28,11 +28,11 @@
                               <thead>
                                   <tr>
                                       <th 
-                                          v-for="(field, index) in privateState.currentData[0]" 
+                                          v-for="(item, index) in privateState.currentData[0]" 
                                           :key="index"
-                                          :style="styles['header']"
+                                          :style="getHeaderStyle(item['originalIndex'])"
                                       >
-                                          {{field}}
+                                          {{item['data']}}
                                       </th>
                                   </tr>
                               </thead>
@@ -65,7 +65,8 @@ import colors from 'vuetify/lib/util/colors'
 
 const TABLE_HEIGHT = 50;
 const TABLE_WIDTH = 80;
-const COL_WIDTH = 200;
+const COL_FONT_SIZE = 12;
+const COL_PADDING = 10;
 const ROW_HEIGHT = 100;
 
 export default {
@@ -75,7 +76,8 @@ export default {
       privateState: {
         tableData: null,
         currentData: null,
-        showTable: false,
+        colsWidth: [],
+        accuColsWidth: [],
       },
       sharedState: {},
       classes: {},
@@ -100,17 +102,17 @@ export default {
           height: ROW_HEIGHT + "px",
           border: "1px solid #ddd",
         },
-        header: {
-          width: COL_WIDTH + "px",
-          textAlign: 'left',
-          border: "1px solid #ddd",
-          padding: '10px',
-          backgroundColor: colors.green.lighten5,
-        },
+        // header: {
+        //   width: COL_WIDTH + "px",
+        //   textAlign: 'left',
+        //   border: "1px solid #ddd",
+        //   padding: '10px',
+        //   backgroundColor: colors.green.lighten5,
+        // },
         col: {
           textAlign: 'left',
           border: "1px solid #ddd",
-          padding: '10px',
+          padding: COL_PADDING + 'px',
         },
       },
     };
@@ -125,49 +127,107 @@ export default {
       {
         download: true,
         complete: function(results) {
-          console.log("Finished:", results.data);
-          that.privateState.tableData = results.data;
-          that.privateState.currentData = results.data.map(row => {
-            return row.slice(
-              0,
-              Math.ceil(
-                document.documentElement.clientWidth *
-                  TABLE_WIDTH /
-                  100 /
-                  COL_WIDTH
-              )
-            );
+          results.data[0] = results.data[0].map((item, index) => {
+            return {
+              "originalIndex": index,
+              "data": item,
+            };
           });
+          that.privateState.tableData = results.data;
+
+          let colsWidth = Array(results.data[0].length).fill(100);
+
+          /* calculate each column width */
+          for(let i = 0; i < results.data.length; i++){
+            for(let j = 0; j < results.data[i].length; j++){
+              if(results.data[i][j].length * COL_FONT_SIZE + COL_PADDING * 2 > colsWidth[j]){
+                  colsWidth[j] = results.data[i][j].length * COL_FONT_SIZE + COL_PADDING * 2;
+              }
+            }
+          }
+          that.privateState.colsWidth = [...colsWidth];
+          
+          /* calculate accumulated columns width */
+          that.privateState.accuColsWidth = Array(results.data[0].length).fill(0);
+          that.privateState.accuColsWidth[0] = that.privateState.colsWidth[0];
+          for(let i = 1; i < results.data[0].length; i++){
+            that.privateState.accuColsWidth[i] = that.privateState.accuColsWidth[i - 1] + that.privateState.colsWidth[i];
+          }
+
+          /* initialize table */
+          let startIndex = that.getColStartIndex();
+          let endIndex = that.getColEndIndex();
+
+          that.privateState.currentData = results.data.map(row => {
+            return row.slice(startIndex, endIndex + 1);
+          });
+
+          /* set the total width of all columns */
           that.styles["whole-contents"].width =
-            results.data[0].length * COL_WIDTH + "px";
+            that.privateState.accuColsWidth[that.privateState.accuColsWidth.length - 1] + "px";
         }
       }
     );
   },
-  computed: {},
+  computed: {
+    
+  },
   methods: {
-    onTableXScroll() {
-      let data = this.privateState.tableData;
-      let viewportWidth = document.querySelector(
-        "#horizontal-virtual-scroll-table-container"
-      ).clientWidth;
-      let colWidth = COL_WIDTH;
+    getHeaderStyle: function(originalIndex){
+      return {
+        width: this.privateState.colsWidth[originalIndex] + "px",
+        textAlign: 'left',
+        border: "1px solid #ddd",
+        padding: COL_PADDING + 'px',
+        backgroundColor: colors.green.lighten5,
+        fontSize: COL_FONT_SIZE + 'px',
+      };
+    },
+    getFirstAccuColIndexGreaterThanWidth(width){
+      /* binary search */
+      var start = 0;
+      var end = this.privateState.accuColsWidth.length - 1;
+      var mid = Math.floor((start + end) / 2);
+
+      while(start != end) {
+        mid = Math.floor((start + end) / 2);
+        if(this.privateState.accuColsWidth[mid] > width){
+          end = mid;
+        }else{
+          start = mid + 1;
+        }
+      }
+
+      return start;
+    },
+    getColStartIndex() {
       let scrollLeft = document.querySelector(
         "#horizontal-virtual-scroll-table-container"
       ).scrollLeft;
-      let startIndex = Math.floor(scrollLeft / colWidth) - 1;
-      startIndex = Math.max(0, startIndex);
-      let endIndex = startIndex + Math.floor(viewportWidth / colWidth) + 1;
-      endIndex = Math.min(data[0].length - 1, endIndex);
-      let tableOverflowX =
-        Math.floor(scrollLeft / colWidth) * colWidth - colWidth;
-      tableOverflowX = startIndex == 0 ? 0 : tableOverflowX;
-      this.privateState.currentData = data.map(row => {
+      let startIndex = this.getFirstAccuColIndexGreaterThanWidth(scrollLeft);
+      return Math.max(startIndex - 1, 0);
+    },
+    getColEndIndex() {
+      let scrollLeft = document.querySelector(
+        "#horizontal-virtual-scroll-table-container"
+      ).scrollLeft;
+      let viewportWidth = document.querySelector(
+        "#horizontal-virtual-scroll-table-container"
+      ).clientWidth;
+      let totalLeft = scrollLeft + viewportWidth;
+      let endIndex = this.getFirstAccuColIndexGreaterThanWidth(totalLeft);
+      return Math.min(endIndex + 1, this.privateState.accuColsWidth.length - 1);
+    },
+    onTableXScroll() {
+      let startIndex = this.getColStartIndex();
+      let endIndex = this.getColEndIndex();
+      this.privateState.currentData = this.privateState.tableData.map(row => {
         return row.slice(startIndex, endIndex + 1);
       });
+      let overflowX = startIndex === 0 ? 0 : this.privateState.accuColsWidth[Math.max(startIndex - 1, 0)];
       this.styles["current-contents"][
         "transform"
-      ] = `translateX(${tableOverflowX}px)`;
+      ] = `translateX(${overflowX}px)`;
     },
     getAllItemsCount() {
       return document.querySelectorAll("*").length;
