@@ -39,7 +39,8 @@
                               <tbody>
                                   <tr v-for="(row, index) in privateState.currentData.slice(1)" :key="index" :style="styles['row']">
                                       <td v-for="(col, index) in row" :key="index" :style="styles['col']">
-                                          {{col}}
+                                          <div v-if="!col" :style="{color: 'lightgrey'}">null</div>
+                                          <div v-else>{{col}}</div>
                                       </td>
                                   </tr>
                               </tbody>
