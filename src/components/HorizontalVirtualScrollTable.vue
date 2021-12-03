@@ -1,59 +1,74 @@
 <template>
-    <div>
-      <div :style="styles['table-container']" v-on:scroll="onTableXScroll" id="horizontal-virtual-scroll-table-container">
-          <div :style="styles['whole-contents']">
-              <div 
-                  :style="styles['current-contents']"
-              >
-                <table :style="styles['table']" v-if="privateState.currentData">
-                    <thead>
-                        <tr>
-                            <th 
-                                v-for="(field, index) in privateState.currentData[0]" 
-                                :key="index"
-                                :style="styles['col']"
-                            >
-                                {{field}}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="(row, index) in privateState.currentData" :key="index">
-                            <td v-for="(col, index) in row" :key="index">
-                                {{col}}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-              </div>
-          </div>
-      </div>
-      <p>document.querySelectorAll('*').length: {{getAllItemsCount()}}</p>
-     </div>
+    <v-container>
+      <v-row :justify="'center'" :align="'center'" :style="{height: '100vh'}">
+        <div v-if="!privateState.currentData">
+            <v-progress-circular
+              :width="3"
+              color="green"
+              indeterminate
+            ></v-progress-circular>
+        </div>
+        <v-sheet
+          color="white"
+          elevation="2"
+          rounded
+        >
+          <v-row no-gutters>
+            <div :style="styles['table-container']" v-on:scroll="onTableXScroll" id="horizontal-virtual-scroll-table-container">
+                <div :style="styles['whole-contents']">
+                    <div 
+                        :style="styles['current-contents']"
+                    >
+                        <table :style="styles['table']" v-if="privateState.currentData">
+                            <thead>
+                                <tr>
+                                    <th 
+                                        v-for="(field, index) in privateState.currentData[0]" 
+                                        :key="index"
+                                        :style="styles['col']"
+                                    >
+                                        {{field}}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, index) in privateState.currentData.slice(1)" :key="index" :style="styles['row']">
+                                    <td v-for="(col, index) in row" :key="index" :style="styles['col']">
+                                        {{col}}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+          </v-row>
+          <div :style="{height: '2rem'}" />
+          <v-row :justify="'center'" no-gutters>
+            <p>document.querySelectorAll('*').length: {{getAllItemsCount()}}</p>
+          </v-row>
+        </v-sheet>
+      </v-row>
+    </v-container>
 </template>
 
 <script>
-/* for local testing purpose */
-// var randomstring = require("randomstring");
-
 /* npm package for converting csv to json format */
 var Papa = require("papaparse");
 
 const TABLE_HEIGHT = 50;
 const TABLE_WIDTH = 80;
 const COL_WIDTH = 200;
+const ROW_HEIGHT = 100;
 
 export default {
   name: "HorizontalVirtualScrollTable",
   data() {
     return {
       privateState: {
-        // rowNum: 100,
-        // colNum: 1000,
-        // stringLen: 10,
         tableData: null,
         currentData: null,
-        // tableOverflowX: 0
+        showTable: false,
       },
       sharedState: {},
       styles: {
@@ -69,11 +84,20 @@ export default {
         "current-contents": {},
         table: {
           tableLayout: "fixed",
-          width: TABLE_WIDTH + "vw"
+          width: TABLE_WIDTH + "vw",
+          borderCollapse: "collapse",
+          
+        },
+        row: {
+          height: ROW_HEIGHT + "px",
+          border: "1px solid #ddd",
         },
         col: {
-          width: COL_WIDTH + "px"
-        }
+          width: COL_WIDTH + "px",
+          textAlign: 'left',
+          border: "1px solid #ddd",
+          padding: '10px',
+        },
       }
     };
   },
@@ -106,24 +130,7 @@ export default {
       }
     );
   },
-  computed: {
-    /* for local tsting  */
-    // getTableData: function() {
-    //   let table = {
-    //     schema: [],
-    //     data: []
-    //   };
-    //   for (let i = 0; i < this.privateState.rowNum; i++) {
-    //     let row = [];
-    //     for (let j = 0; j < this.privateState.colNum; j++) {
-    //       if (i == 0) table["schema"].push("field_" + j);
-    //       row.push(randomstring.generate(this.privateState.stringLen));
-    //     }
-    //     table["data"].push(row);
-    //   }
-    //   return table;
-    // }
-  },
+  computed: {},
   methods: {
     onTableXScroll() {
       let data = this.privateState.tableData;
@@ -138,16 +145,12 @@ export default {
       startIndex = Math.max(0, startIndex);
       let endIndex = startIndex + Math.floor(viewportWidth / colWidth) + 1;
       endIndex = Math.min(data[0].length - 1, endIndex);
-
       let tableOverflowX =
         Math.floor(scrollLeft / colWidth) * colWidth - colWidth;
-
-      console.log(startIndex, " ", endIndex);
+      tableOverflowX = startIndex == 0 ? 0 : tableOverflowX;
       this.privateState.currentData = data.map(row => {
         return row.slice(startIndex, endIndex + 1);
       });
-      console.log(this.privateState.currentData);
-
       this.styles["current-contents"][
         "transform"
       ] = `translateX(${tableOverflowX}px)`;
