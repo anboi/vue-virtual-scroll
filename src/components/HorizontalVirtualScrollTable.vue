@@ -1,53 +1,59 @@
 <template>
     <v-container>
       <v-row :justify="'center'" :align="'center'" :style="{height: '100vh'}">
-        <div v-if="!privateState.currentData">
-            <v-progress-circular
-              :width="3"
-              color="green"
-              indeterminate
-            ></v-progress-circular>
-        </div>
-        <v-sheet
-          color="white"
-          elevation="2"
-          rounded
-        >
-          <v-row no-gutters>
-            <div :style="styles['table-container']" v-on:scroll="onTableXScroll" id="horizontal-virtual-scroll-table-container">
-                <div :style="styles['whole-contents']">
-                    <div 
-                        :style="styles['current-contents']"
-                    >
-                        <table :style="styles['table']" v-if="privateState.currentData">
-                            <thead>
-                                <tr>
-                                    <th 
-                                        v-for="(field, index) in privateState.currentData[0]" 
-                                        :key="index"
-                                        :style="styles['col']"
-                                    >
-                                        {{field}}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(row, index) in privateState.currentData.slice(1)" :key="index" :style="styles['row']">
-                                    <td v-for="(col, index) in row" :key="index" :style="styles['col']">
-                                        {{col}}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        <v-col>
+          <v-row :justify="'center'">
+            <p :style="{fontSize: '2rem', fontWight: 'bold',}">Horizontal Virtual Scroll Table</p>
           </v-row>
           <div :style="{height: '2rem'}" />
-          <v-row :justify="'center'" no-gutters>
-            <p>document.querySelectorAll('*').length: {{getAllItemsCount()}}</p>
-          </v-row>
-        </v-sheet>
+          <div v-if="!privateState.currentData">
+              <v-progress-circular
+                :width="3"
+                color="green"
+                indeterminate
+              ></v-progress-circular>
+          </div>
+          <v-sheet
+            color="white"
+            elevation="2"
+            rounded
+          >
+            <v-row no-gutters>
+              <div :style="styles['table-container']" v-on:scroll="onTableXScroll" id="horizontal-virtual-scroll-table-container">
+                  <div :style="styles['whole-contents']">
+                      <div 
+                          :style="styles['current-contents']"
+                      >
+                          <table :style="styles['table']" v-if="privateState.currentData">
+                              <thead>
+                                  <tr>
+                                      <th 
+                                          v-for="(field, index) in privateState.currentData[0]" 
+                                          :key="index"
+                                          :style="styles['header']"
+                                      >
+                                          {{field}}
+                                      </th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr v-for="(row, index) in privateState.currentData.slice(1)" :key="index" :style="styles['row']">
+                                      <td v-for="(col, index) in row" :key="index" :style="styles['col']">
+                                          {{col}}
+                                      </td>
+                                  </tr>
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+            </v-row>
+            <div :style="{height: '2rem'}" />
+            <v-row :justify="'center'" no-gutters>
+              <p>document.querySelectorAll('*').length: {{getAllItemsCount()}}</p>
+            </v-row>
+          </v-sheet>
+        </v-col>
       </v-row>
     </v-container>
 </template>
@@ -55,6 +61,7 @@
 <script>
 /* npm package for converting csv to json format */
 var Papa = require("papaparse");
+import colors from 'vuetify/lib/util/colors'
 
 const TABLE_HEIGHT = 50;
 const TABLE_WIDTH = 80;
@@ -71,6 +78,7 @@ export default {
         showTable: false,
       },
       sharedState: {},
+      classes: {},
       styles: {
         "table-container": {
           maxHeight: TABLE_HEIGHT + "vh",
@@ -92,13 +100,19 @@ export default {
           height: ROW_HEIGHT + "px",
           border: "1px solid #ddd",
         },
-        col: {
+        header: {
           width: COL_WIDTH + "px",
           textAlign: 'left',
           border: "1px solid #ddd",
           padding: '10px',
+          backgroundColor: colors.green.lighten5,
         },
-      }
+        col: {
+          textAlign: 'left',
+          border: "1px solid #ddd",
+          padding: '10px',
+        },
+      },
     };
   },
   mounted() {
